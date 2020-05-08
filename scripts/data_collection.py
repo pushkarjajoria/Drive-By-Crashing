@@ -179,7 +179,7 @@ class ThymioController:
         self.image = np.array(im, dtype=np.float32)
 
         ## to respawn/teleport the robot if it crashes.
-    def respawn(self,theta):
+    def respawn(self,quaternion_theta):
         vMsg = ModelState()
         vMsg.model_name = self.name
         vMsg.model_name = vMsg.model_name[1:]
@@ -191,8 +191,8 @@ class ThymioController:
 
         vMsg.pose.orientation.x = 0
         vMsg.pose.orientation.y = 0
-        vMsg.pose.orientation.z = float(theta)
-        vMsg.pose.orientation.w = 1
+        vMsg.pose.orientation.z = quaternion_theta**0.5
+        vMsg.pose.orientation.w = (1-quaternion_theta)**0.5
         rospy.wait_for_service('/gazebo/set_model_state')
 
         try:
@@ -221,8 +221,8 @@ class ThymioController:
         thread.start_new_thread(self.save_image, ())
         while not rospy.is_shutdown():
             if self.collided==True:
-                vTheta = np.random.uniform(0,1)*90
-                self.respawn(vTheta)
+                q_theta = np.random.uniform(0,1)
+                self.respawn(q_theta)
                 self.collided=False
 
 
