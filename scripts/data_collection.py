@@ -35,6 +35,9 @@ class ThymioController:
         self.right_sensor = 10
 
         self.collision_tol = .07
+        ## changes
+        self.vX = np.array([1,2,5,6,7])
+        self.vY = np.array([-1,-3,-5,-4])
 
         self.collided = False # Flag to stop the robot to avoid obstacles
 
@@ -164,11 +167,12 @@ class ThymioController:
         self.image = np.array(im, dtype=np.float32)
 
         ## to respawn/teleport the robot if it crashes.
-    def respawn(self,x,y,theta):
+    def respawn(self,theta):
         vMsg = ModelState()
         vMsg.model_name = self.name
         vMsg.model_name = vMsg.model_name[1:]
-        
+        x = np.random.choice(self.vX,1)
+        y = np.random.choice(self.vY,1)
         vMsg.pose.position.x = float(x)
         vMsg.pose.position.y = float(y)
         vMsg.pose.position.z = 0
@@ -205,9 +209,8 @@ class ThymioController:
         thread.start_new_thread(self.save_image, ())
         while not rospy.is_shutdown():
             if self.collided==True:
-                vX,vY = np.random.uniform(-1,1,2)*15
                 vTheta = np.random.uniform(0,1)*90
-                self.respawn(0,0,0)
+                self.respawn(vTheta)
                 self.collided=False
 
 
@@ -224,8 +227,8 @@ class ThymioController:
                             self.right_sensor])
 
                 if min(vsensor)<self.collision_tol:
-                    print("*"*25)
-                    print("Collision!!!!")
+                    #print("*"*25)
+                    #print("Collision!!!!")
                     self.collided=True
 
                 # sleep until next step
