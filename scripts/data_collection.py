@@ -191,6 +191,7 @@ class ThymioController:
 
         vMsg.pose.orientation.x = 0
         vMsg.pose.orientation.y = 0
+        # http://wiki.ogre3d.org/Quaternion+and+Rotation+Primer
         vMsg.pose.orientation.z = quaternion_theta**0.5
         vMsg.pose.orientation.w = (1-quaternion_theta)**0.5
         rospy.wait_for_service('/gazebo/set_model_state')
