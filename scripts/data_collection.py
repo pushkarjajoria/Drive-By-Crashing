@@ -34,7 +34,7 @@ class ThymioController:
         self.center_right_sensor = 10
         self.right_sensor = 10
 
-        self.collision_tol = .07
+        self.collision_tol = .02
         ## changes
         self.vX = np.array([1,2,5,6,7])
         self.vY = np.array([-1,-3,-5,-4])
@@ -94,6 +94,7 @@ class ThymioController:
         )
 
         self.image_save_frequency = 1 # seconds
+        self.collision_save_frequency = 0.1
         self.image_count = 0
         self.image = []
         self.dataset_images = []
@@ -141,12 +142,19 @@ class ThymioController:
         rospy.signal_shutdown("Data collection successfully completed!")
 
     def save_image(self):
+        # Waiting for image data
         while True:
             if(len(self.image)>0):
                 break;
             time.sleep(self.image_save_frequency)
 
         while self.image_count<=4000:
+            if self.image_count%300 == 0:
+                print("*"*25)
+                print("Saved {} images".format(self.image_count))
+                print("*"*25)
+
+            sleep_duration = self.image_save_frequency
             desired_size = (200,200)
             current_image = cv2.resize(self.image, dsize=desired_size, interpolation=cv2.INTER_CUBIC)
                         
@@ -155,10 +163,14 @@ class ThymioController:
                             self.center_sensor, 
                             self.center_right_sensor, 
                             self.right_sensor]
+
+            if min(sensor_values) < 0.11:
+                sleep_duration = self.collision_save_frequency
+
             self.dataset_images.append(current_image)
             self.dataset_labels.append(sensor_values)
             self.image_count += 1
-            time.sleep(self.image_save_frequency)
+            time.sleep(sleep_duration)
         self.create_dataset()
 
 
