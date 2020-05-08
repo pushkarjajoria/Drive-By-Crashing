@@ -93,7 +93,7 @@ class ThymioController:
             self.process_image
         )
 
-        self.image_save_frequency = 1 # seconds
+        self.image_save_frequency = 1.5 # seconds
         self.collision_save_frequency = 0.1
         self.image_count = 0
         self.image = []
@@ -139,20 +139,21 @@ class ThymioController:
     def create_dataset(self):
         np.save("dataset/" + "dataset_images" + ".npy", self.dataset_images)
         np.save("dataset/" + "dataset_labels" + ".npy", self.dataset_labels)
-        rospy.signal_shutdown("Data collection successfully completed!")
+        print("*"*25)
+        print("Data collection complete")
+        print("*"*25)
+        os.exit(1)
 
-    def save_image(self):
+    def save_image(self, total_images=5000):
         # Waiting for image data
         while True:
             if(len(self.image)>0):
                 break;
             time.sleep(self.image_save_frequency)
 
-        while self.image_count<=4000:
-            if self.image_count%300 == 0:
-                print("*"*25)
+        while self.image_count<=total_images:
+            if self.image_count%100 == 0:
                 print("Saved {} images".format(self.image_count))
-                print("*"*25)
 
             sleep_duration = self.image_save_frequency
             desired_size = (200,200)
@@ -179,7 +180,10 @@ class ThymioController:
         self.image = np.array(im, dtype=np.float32)
 
         ## to respawn/teleport the robot if it crashes.
-    def respawn(self,quaternion_theta):
+    def respawn(self,theta): # theta = [-pi/2, pi/2]
+        # http://wiki.ogre3d.org/Quaternion+and+Rotation+Primer
+        w = np.cos(theta/2) 
+        z = np.sin(theta/2)
         vMsg = ModelState()
         vMsg.model_name = self.name
         vMsg.model_name = vMsg.model_name[1:]
@@ -191,9 +195,8 @@ class ThymioController:
 
         vMsg.pose.orientation.x = 0
         vMsg.pose.orientation.y = 0
-        # http://wiki.ogre3d.org/Quaternion+and+Rotation+Primer
-        vMsg.pose.orientation.z = quaternion_theta**0.5
-        vMsg.pose.orientation.w = (1-quaternion_theta)**0.5
+        vMsg.pose.orientation.z = z
+        vMsg.pose.orientation.w = w
         rospy.wait_for_service('/gazebo/set_model_state')
 
         try:
@@ -222,7 +225,7 @@ class ThymioController:
         thread.start_new_thread(self.save_image, ())
         while not rospy.is_shutdown():
             if self.collided==True:
-                q_theta = np.random.uniform(0,1)
+                q_theta = np.random.uniform(-1,1)*np.pi
                 self.respawn(q_theta)
                 self.collided=False
 
