@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <launch>
 
-  <env name="GAZEBO_MODEL_PATH" value="$(find thymio_description)/..:$(find thymioid_description)/..:$(find thymio_course_skeleton):$(optenv GAZEBO_MODEL_PATH)" />
+  <env name="GAZEBO_MODEL_PATH" value="$(find thymio_description)/..:$(find thymioid_description)/..:$(find drive_by_crashing):$(optenv GAZEBO_MODEL_PATH)" />
   <env name="SVGA_VGPU10" value="0"/>
   <arg name="gui" default="true"/>
   <arg name="name" default=""/>
   <arg name="world" default="empty"/>
 
-  <include file="$(find thymio_course_skeleton)/launch/custom_world.launch">
+  <include file="$(find drive_by_crashing)/launch/custom_world.launch">
     <arg name="gui" value="$(arg gui)"/>
     <arg name="headless" value="$(eval not arg('gui'))"/>
     <arg name="paused" value="false"/>
@@ -48,7 +48,7 @@
 <arg name="robot_name" default="thymio10" />
 
 <!-- nodes are exectued -->
-<node pkg="thymio_course_skeleton" name="thymio_q2" type="data_collection.py" output="screen">
+<node pkg="drive_by_crashing" name="thymio_q2" type="data_collection.py" output="screen">
     <!-- paramters must be set in the launchfile -->
     <param name="robot_name" value="/$(arg robot_name)" />
 </node>
