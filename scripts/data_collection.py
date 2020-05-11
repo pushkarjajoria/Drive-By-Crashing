@@ -142,9 +142,8 @@ class ThymioController:
         print("*"*25)
         print("Data collection complete")
         print("*"*25)
-        os.exit(1)
 
-    def save_image(self, total_images=5000):
+    def save_image(self, total_images=1000):
         # Waiting for image data
         while True:
             if(len(self.image)>0):
@@ -156,7 +155,7 @@ class ThymioController:
                 print("Saved {} images".format(self.image_count))
 
             sleep_duration = self.image_save_frequency
-            desired_size = (200,200)
+            desired_size = (50,50)
             current_image = cv2.resize(self.image, dsize=desired_size, interpolation=cv2.INTER_CUBIC)
                         
             sensor_values = [self.left_sensor, 

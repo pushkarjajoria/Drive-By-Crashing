@@ -31,27 +31,31 @@ class Net(nn.Module):
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(32, 64, 5)
         self.conv3 = nn.Conv2d(64, 16, 5)
-        self.fc1 = nn.Linear(448, 128)
-        self.fc2 = nn.Linear(128, 10)
-        self.fc3 = nn.Linear(10, 1)
+        self.fc1 = nn.Linear(64, 16)
+        self.fc2 = nn.Linear(16, 5)
+        self.fc3 = nn.Linear(5, 1)
 
     def forward(self, x):
-        x = self.pool2(F.relu(self.conv1(x)))
-        x = self.pool2(F.relu(self.conv2(x)))
+        # pdb.set_trace()
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
         x = self.pool(F.relu(self.conv3(x)))
         v_to = 1
         for i in range(1,len(x.shape)):
           v_to = v_to*x.shape[i]
         x = x.view(-1, v_to)
+        #pdb.set_trace()
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
         x = F.tanh(x)
+        # print("Output data of model is {}".format(x[0]))
+
         return x
 
 class Cnn_model:
     def __init__(self):
-        self.vFile = "/home/usi/Desktop/249_model.pt"
+        self.vFile = "/home/usi/Desktop/299_model.pt"
 
 
     def load_model(self):
@@ -104,7 +108,7 @@ class ThymioController:
         self.rate = rospy.Rate(500)
 
     def cnn_controller(self):
-        desired_size = (240,320)
+        desired_size = (50,50)
         current_image = cv2.resize(self.image, dsize=desired_size, interpolation=cv2.INTER_CUBIC)
         v_image = torch.from_numpy(current_image)
         vShape = v_image.size()
