@@ -48,7 +48,7 @@
 <arg name="robot_name" default="thymio10" />
 
 <!-- nodes are exectued -->
-<node pkg="drive_by_crashing" name="thymio_q2" type="cnn_controller.py" output="screen">
+<node pkg="drive_by_crashing" name="thymio_q2" type="sensor_controller.py" output="screen">
     <!-- paramters must be set in the launchfile -->
     <param name="robot_name" value="/$(arg robot_name)" />
 </node>
