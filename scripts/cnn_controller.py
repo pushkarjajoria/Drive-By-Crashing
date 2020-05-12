@@ -26,18 +26,20 @@ import cv2
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, 7)
-        self.pool2 = nn.MaxPool2d(4, 4)
+        self.conv1 = nn.Conv2d(3, 32, 3)
+#        self.pool2 = nn.MaxPool2d(2, 2)
         self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(32, 64, 5)
+        self.conv2 = nn.Conv2d(32, 64, 3)
         self.conv3 = nn.Conv2d(64, 16, 5)
-        self.fc1 = nn.Linear(64, 16)
-        self.fc2 = nn.Linear(16, 5)
-        self.fc3 = nn.Linear(5, 1)
-
+        self.fc1 = nn.Linear(1296, 32)
+        self.fc2 = nn.Linear(32, 1)
+        self.drop = nn.Dropout(.4)
+        self.drop2 = nn.Dropout(.4)
+        
+#        self.fc3 = nn.Linear(5, 1)
     def forward(self, x):
         # pdb.set_trace()
-        x = self.pool(F.relu(self.conv1(x)))
+        x = self.drop(self.pool(F.relu(self.conv1(x))))
         x = self.pool(F.relu(self.conv2(x)))
         x = self.pool(F.relu(self.conv3(x)))
         v_to = 1
@@ -46,16 +48,16 @@ class Net(nn.Module):
         x = x.view(-1, v_to)
         #pdb.set_trace()
         x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        x = F.tanh(x)
+        x = self.fc2(x)
+#        x = self.fc3(x)
+        x = torch.tanh(x)
         # print("Output data of model is {}".format(x[0]))
 
         return x
 
 class Cnn_model:
     def __init__(self):
-        self.vFile = "/home/usi/Desktop/299_model.pt"
+        self.vFile = "/home/usi/Desktop/599_model.pt"
 
 
     def load_model(self):
@@ -70,6 +72,11 @@ class ThymioController:
 
     def __init__(self):
         """Initialization."""
+        self.left_sensor = 10
+        self.center_left_sensor = 10
+        self.center_sensor = 10
+        self.center_right_sensor = 10
+        self.right_sensor = 10
 
         # initialize the node
         rospy.init_node(
@@ -93,6 +100,34 @@ class ThymioController:
         queue_size=10  # queue size
         )
 
+        ############################################################
+        # Sensor Subscribers
+        self.proximity_subscriber_right = rospy.Subscriber(
+        self.name + '/proximity/right',
+        Range,
+        self.log_sensor_right
+        )
+        self.proximity_subscriber_center_right = rospy.Subscriber(
+        self.name + '/proximity/center_right',
+        Range,
+        self.log_sensor_center_right
+        )
+        self.proximity_subscriber_center = rospy.Subscriber(
+        self.name + '/proximity/center',
+        Range,
+        self.log_sensor_center
+        )
+        self.proximity_subscriber_center_left = rospy.Subscriber(
+        self.name + '/proximity/center_left',
+        Range,
+        self.log_sensor_center_left
+        )
+        self.proximity_subscriber_left = rospy.Subscriber(
+        self.name + '/proximity/left',
+        Range,
+        self.log_sensor_left
+        )
+
         self.image_subscriber = rospy.Subscriber(
             self.name + '/camera/image_raw',
             numpy_msg(Image),
@@ -105,10 +140,31 @@ class ThymioController:
         rospy.on_shutdown(self.stop)
 
         # set node update frequency in Hz
-        self.rate = rospy.Rate(500)
+        self.rate = rospy.Rate(50)
+
+    def log_sensor_right(self, data):
+        """Subscriber callback for robot right sensor data"""
+        self.right_sensor = data.range
+
+    def log_sensor_center_right(self, data):
+        """Subscriber callback for robot right sensor data"""
+        self.center_right_sensor = data.range
+
+    def log_sensor_center(self, data):
+        """Subscriber callback for robot right sensor data"""
+        self.center_sensor = data.range
+
+
+    def log_sensor_center_left(self, data):
+        """Subscriber callback for robot right sensor data"""
+        self.center_left_sensor = data.range
+
+    def log_sensor_left(self, data):
+        """Subscriber callback for robot right sensor data"""
+        self.left_sensor = data.range
 
     def cnn_controller(self):
-        desired_size = (50,50)
+        desired_size = (100,100)
         current_image = cv2.resize(self.image, dsize=desired_size, interpolation=cv2.INTER_CUBIC)
         v_image = torch.from_numpy(current_image)
         vShape = v_image.size()
@@ -119,18 +175,25 @@ class ThymioController:
         angular_z = self.model(v_image)
         return angular_z
 
-
     def process_image(self, data):
         im = np.frombuffer(data.data, dtype=np.uint8).reshape(data.height, data.width, -1)
         self.image = np.array(im, dtype=np.float32)
-        #print("*"*25)
-        #print(np.array(self.image).dtype)
-        #print(self.image.dtype)
-        #print("*"*25)
+
 
     def get_control(self, linear_x=0.25):
         # to put a higher limit on total velocity
-        angular_z = self.cnn_controller()
+        sensor_values = [self.left_sensor, 
+                            self.center_left_sensor, 
+                            self.center_sensor, 
+                            self.center_right_sensor, 
+                            self.right_sensor]
+
+        predicted_angular_z = self.cnn_controller().detach().numpy()
+        #predicted_angular_z = np.dot(predicted_sensors, np.array([1,2,0,-2,-1]))/3
+        #computed_angular_z = np.dot(sensor_values, np.array([1,2,0,-2,-1]))/3
+#        print(predicted_angular_z)
+#        if abs(predicted_angular_z) < 0.1:
+#            predicted_angular_z = 0 
         return Twist(
         linear=Vector3(
         linear_x,  # moves forward .2 m/s
@@ -140,7 +203,7 @@ class ThymioController:
         angular=Vector3(
         .0,
         .0,
-        angular_z*0.25
+        predicted_angular_z*2
         )
         )
 
