@@ -21,6 +21,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import cv2
+from gazebo_msgs.msg import ModelState
+from gazebo_msgs.srv import SetModelState
+
 
 
 class Net(nn.Module):
@@ -77,6 +80,13 @@ class ThymioController:
         self.center_sensor = 10
         self.center_right_sensor = 10
         self.right_sensor = 10
+
+        self.collision_tol = .02
+
+        self.vX = np.array([0,1,2,5,6,7])
+        self.vY = np.array([0,-1,-3,-5,-4])
+
+        self.collided = False # Flag to stop the robot to avoid obstacles
 
         # initialize the node
         rospy.init_node(
@@ -179,6 +189,31 @@ class ThymioController:
         im = np.frombuffer(data.data, dtype=np.uint8).reshape(data.height, data.width, -1)
         self.image = np.array(im, dtype=np.float32)
 
+    def respawn(self,theta): # theta = [-pi/2, pi/2]
+        # http://wiki.ogre3d.org/Quaternion+and+Rotation+Primer
+        w = np.cos(theta/2) 
+        z = np.sin(theta/2)
+        vMsg = ModelState()
+        vMsg.model_name = self.name
+        vMsg.model_name = vMsg.model_name[1:]
+        x = np.random.choice(self.vX,1)
+        y = np.random.choice(self.vY,1)
+        vMsg.pose.position.x = float(x)
+        vMsg.pose.position.y = float(y)
+        vMsg.pose.position.z = 0
+
+        vMsg.pose.orientation.x = 0
+        vMsg.pose.orientation.y = 0
+        vMsg.pose.orientation.z = z
+        vMsg.pose.orientation.w = w
+        rospy.wait_for_service('/gazebo/set_model_state')
+
+        try:
+            vState = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
+            return vState(vMsg)
+        except rospy.ServiceException, e:
+            print(e)
+
 
     def get_control(self, linear_x=0.25):
         # to put a higher limit on total velocity
@@ -208,16 +243,31 @@ class ThymioController:
         )
 
     def run(self):
-        """Controls the Thymio."""
         while not rospy.is_shutdown():
-            # decide control action
-            velocity = self.get_control()
-            # publish velocity message
-            self.velocity_publisher.publish(velocity)
+            if self.collided==True:
+               q_theta = np.random.uniform(-1,1)*np.pi
+               self.respawn(q_theta)
+               self.collided=False
 
-            # sleep until next step
+            while not self.collided:
+                # decide control action
+                velocity = self.get_control()
+                # publish velocity message
+                self.velocity_publisher.publish(velocity)
+               
+                vsensor = np.array([self.left_sensor, 
+                           self.center_left_sensor, 
+                           self.center_sensor, 
+                           self.center_right_sensor, 
+                           self.right_sensor])
+
+                if min(vsensor)<self.collision_tol:
+                    self.collided=True
+
+               # sleep until next step
             self.rate.sleep()
 
+#           self.collided = False # Set the flag back
         return
 
     def stop(self):
