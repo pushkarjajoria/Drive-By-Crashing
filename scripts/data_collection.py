@@ -36,8 +36,8 @@ class ThymioController:
 
         self.collision_tol = .02
         ## changes
-        self.vX = np.array([1,2,5,6,7])
-        self.vY = np.array([-1,-3,-5,-4])
+        self.vX = np.array([0,1,2,5,6,7])
+        self.vY = np.array([0,-1,-3,-5,-4])
 
         self.collided = False # Flag to stop the robot to avoid obstacles
 
@@ -94,7 +94,7 @@ class ThymioController:
         )
 
         self.image_save_frequency = 1.5 # seconds
-        self.collision_save_frequency = 0.1
+        self.collision_save_frequency = 0.2
         self.image_count = 0
         self.image = []
         self.dataset_images = []
@@ -143,11 +143,11 @@ class ThymioController:
         print("Data collection complete")
         print("*"*25)
 
-    def save_image(self, total_images=1000):
+    def save_image(self, total_images=4000):
         # Waiting for image data
         while True:
             if(len(self.image)>0):
-                break;
+                break
             time.sleep(self.image_save_frequency)
 
         while self.image_count<=total_images:
@@ -155,7 +155,7 @@ class ThymioController:
                 print("Saved {} images".format(self.image_count))
 
             sleep_duration = self.image_save_frequency
-            desired_size = (50,50)
+            desired_size = (100,100)
             current_image = cv2.resize(self.image, dsize=desired_size, interpolation=cv2.INTER_CUBIC)
                         
             sensor_values = [self.left_sensor, 
@@ -163,12 +163,13 @@ class ThymioController:
                             self.center_sensor, 
                             self.center_right_sensor, 
                             self.right_sensor]
+            angular_velocity = np.dot(sensor_values, [1,2,0,-2,-1])
 
-            if min(sensor_values) < 0.11:
+            if min(sensor_values) < 0.7:
                 sleep_duration = self.collision_save_frequency
 
             self.dataset_images.append(current_image)
-            self.dataset_labels.append(sensor_values)
+            self.dataset_labels.append(angular_velocity)
             self.image_count += 1
             time.sleep(sleep_duration)
         self.create_dataset()
@@ -242,8 +243,6 @@ class ThymioController:
                             self.right_sensor])
 
                 if min(vsensor)<self.collision_tol:
-                    #print("*"*25)
-                    #print("Collision!!!!")
                     self.collided=True
 
                 # sleep until next step

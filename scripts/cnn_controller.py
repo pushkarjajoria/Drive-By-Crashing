@@ -44,7 +44,7 @@ class Net(nn.Module):
         # pdb.set_trace()
         x = self.drop(self.pool(F.relu(self.conv1(x))))
         x = self.pool(F.relu(self.conv2(x)))
-        x = self.pool(F.relu(self.conv3(x)))
+        x = self.drop2(self.pool(F.relu(self.conv3(x))))
         v_to = 1
         for i in range(1,len(x.shape)):
           v_to = v_to*x.shape[i]
@@ -53,14 +53,14 @@ class Net(nn.Module):
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
 #        x = self.fc3(x)
-        x = torch.tanh(x)
+        x = x
         # print("Output data of model is {}".format(x[0]))
 
         return x
 
 class Cnn_model:
     def __init__(self):
-        self.vFile = "/home/usi/Desktop/599_model.pt"
+        self.vFile = "/home/usi/Desktop/799_model.pt"
 
 
     def load_model(self):
@@ -75,6 +75,7 @@ class ThymioController:
 
     def __init__(self):
         """Initialization."""
+        self.file = open("prediction_log.txt", "a")
         self.left_sensor = 10
         self.center_left_sensor = 10
         self.center_sensor = 10
@@ -176,6 +177,7 @@ class ThymioController:
     def cnn_controller(self):
         desired_size = (100,100)
         current_image = cv2.resize(self.image, dsize=desired_size, interpolation=cv2.INTER_CUBIC)
+        current_image = current_image/255 # Normalization
         v_image = torch.from_numpy(current_image)
         vShape = v_image.size()
         v_image = v_image.reshape((1,vShape[2],vShape[0],vShape[1]))
@@ -224,6 +226,7 @@ class ThymioController:
                             self.right_sensor]
 
         predicted_angular_z = self.cnn_controller().detach().numpy()
+        self.file.write(predicted_angular_z)
         #predicted_angular_z = np.dot(predicted_sensors, np.array([1,2,0,-2,-1]))/3
         #computed_angular_z = np.dot(sensor_values, np.array([1,2,0,-2,-1]))/3
 #        print(predicted_angular_z)
@@ -238,7 +241,7 @@ class ThymioController:
         angular=Vector3(
         .0,
         .0,
-        predicted_angular_z*2
+        predicted_angular_z*4
         )
         )
 
