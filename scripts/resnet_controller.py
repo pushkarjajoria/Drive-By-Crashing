@@ -26,6 +26,7 @@ from gazebo_msgs.srv import SetModelState
 from collections import deque
 import time
 from datetime import datetime
+import torchvision.models as models
 
 class Net(nn.Module):
     def __init__(self):
@@ -61,13 +62,20 @@ class Net(nn.Module):
 
 class Cnn_model:
     def __init__(self):
-        self.vFile = "/home/usi/Desktop/models/angular_model_old.pt"
-        self.centrality_model_file = "/home/usi/Desktop/models/centrality_model_old.pt"
+        self.vFile = "/home/usi/Desktop/models/angular_model_resnet.pt"
+        self.centrality_model_file = "/home/usi/Desktop/models/centrality_model_resnet.pt"
 
     def load_model(self, centrality_model = False):
         use_cuda = torch.cuda.is_available()
         DEVICE = torch.device('cuda' if use_cuda else 'cpu')   # 'cpu' in this case
-        cpu_model = Net()
+        resnet18 = models.resnet18()
+        #set_parameter_requires_grad(resnet18, feature_extract)
+        resnet18.fc = nn.Linear(512,256)
+        #vnet2 = Net()
+        net2 = nn.Sequential(nn.Linear(256, 128), nn.ReLU(),nn.Linear(128, 1),nn.Tanh())
+        cpu_model = nn.Sequential(resnet18, net2)
+        #vNet.to(vdevice)
+        #cpu_model = Net()
         if centrality_model:
             cpu_model.load_state_dict(torch.load(self.centrality_model_file, map_location=DEVICE))
         else:
@@ -91,7 +99,7 @@ class ThymioController:
 
         self.total_collition = 0
         self.collision_tol = .02
-        self.CENTRALITY_THRESHOLD = 0.23
+        self.CENTRALITY_THRESHOLD = 0.15
 
         self.vX = np.array([0,1,2,5,6,7])
         self.vY = np.array([0,-1,-3,-5,-4])

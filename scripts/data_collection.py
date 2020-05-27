@@ -137,13 +137,13 @@ class ThymioController:
 
 
     def create_dataset(self):
-        np.save("dataset/" + "dataset_images" + ".npy", self.dataset_images)
-        np.save("dataset/" + "dataset_labels" + ".npy", self.dataset_labels)
+        np.save("dataset/" + "dataset_images_testing" + ".npy", self.dataset_images)
+        np.save("dataset/" + "dataset_labels_testing" + ".npy", self.dataset_labels)
         print("*"*25)
         print("Data collection complete")
         print("*"*25)
 
-    def save_image(self, total_images=4000):
+    def save_image(self, total_images=2000):
         # Waiting for image data
         while True:
             if(len(self.image)>0):
@@ -158,18 +158,18 @@ class ThymioController:
             desired_size = (100,100)
             current_image = cv2.resize(self.image, dsize=desired_size, interpolation=cv2.INTER_CUBIC)
                         
-            sensor_values = [self.left_sensor, 
+            sensor_values = np.array([self.left_sensor, 
                             self.center_left_sensor, 
                             self.center_sensor, 
                             self.center_right_sensor, 
-                            self.right_sensor]
-            angular_velocity = np.dot(sensor_values, [1,2,0,-2,-1])
+                            self.right_sensor])
+            #angular_velocity = np.dot(sensor_values, [-1,-1,4,-1,-1])
 
             if min(sensor_values) < 0.7:
                 sleep_duration = self.collision_save_frequency
 
             self.dataset_images.append(current_image)
-            self.dataset_labels.append(angular_velocity)
+            self.dataset_labels.append(sensor_values)
             self.image_count += 1
             time.sleep(sleep_duration)
         self.create_dataset()
